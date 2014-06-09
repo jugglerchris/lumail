@@ -184,7 +184,7 @@ public:
 
     /**
      * Call a global function, passing a CMaildir, and return the
-     * result as converted to boolean using Lua semantics, ie only
+     * result as converted to bool using Lua semantics, ie only
      * false and nil are not true.
      *
      * The named Lua function should return a true value to include the
@@ -195,6 +195,18 @@ public:
      */
     bool filter(const char *name, std::shared_ptr<CMaildir> maildir,
                 bool onerror=true);
+                
+    /**
+     * Call a global function, passing it two CMaildirs, and return
+     * the result as converted to bool using Lua semantics, ie only
+     * false and nil are not true.
+     *
+     * If there is an error then calls the on_error function and
+     * returns false.
+     */
+    bool compare(const char *name,
+                 std::shared_ptr<CMaildir> a,
+                 std::shared_ptr<CMaildir> b);
 
 protected:
 

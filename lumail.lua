@@ -1296,6 +1296,21 @@ function filter_maildirs(maildir)
 end
 
 --
+-- Example sorting of the maildir list
+--
+--[[ Put folders with unread messages first.
+function sort_maildirs(a, b)
+    return a.unread_messages > b.unread_messages
+end
+]]
+
+--[[ Sort by path length
+function sort_maildirs(a, b)
+    return #a.path > #b.path
+end
+]]
+
+--
 -- Fun times.
 --
 function  show_attachment_one()

@@ -860,3 +860,52 @@ bool CLua::filter(const char *name, std::shared_ptr<CMaildir> maildir,
      */
     return lua_toboolean(m_lua, -1);
 }
+
+/**
+ * Call a global function, passing it two CMaildirs, and return
+ * the result as converted to bool using Lua semantics, ie only
+ * false and nil are not true.
+ */
+bool CLua::compare(const char *name,
+                   std::shared_ptr<CMaildir> a,
+                   std::shared_ptr<CMaildir> b)
+{
+    lua_getglobal(m_lua, name);
+    
+    if (!lua_isfunction(m_lua, -1))
+    {
+        return false;
+    }
+    
+    if (!push_maildir(m_lua, a))
+    {
+        return false;
+    }
+    if (!push_maildir(m_lua, b))
+    {
+        return false;
+    }
+    
+    int error = lua_pcall(m_lua, 2, 1, 0);
+    
+    if (error)
+    {
+        lua_getglobal(m_lua, "on_error");
+        /* We could check for an error, but what can we do?  Instead we'll
+         * just get an error from lua_pcall. */
+         
+        /* Push the error string from the previous pcall onto the top of
+         * the stack. */
+        lua_pushvalue(m_lua, -2);
+        
+        /* And call the error handler. */
+        lua_pcall(m_lua, 1, 0, 0);
+         
+        return false;
+    }
+    
+    /* The call returned successfully, so return the actual result as a
+     * boolean
+     */
+    return lua_toboolean(m_lua, -1);
+}

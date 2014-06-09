@@ -284,6 +284,19 @@ bool sort_maildir_ptr_by_name(std::shared_ptr<CMaildir> a, std::shared_ptr<CMail
     return( strcasecmp(a->path().c_str(), b->path().c_str() ) < 0 );
 }
 
+/**
+ * Sort maildirs using a custom Lua function "sort_maildirs"
+ */
+bool sort_maildir_ptr_by_lua(std::shared_ptr<CMaildir> a, std::shared_ptr<CMaildir> b)
+{
+    assert( NULL != a );
+    assert( NULL != b );
+    
+    CLua *lua = CLua::Instance();
+    /* Call the Lua function to do the comparison */
+    return lua->compare("sort_maildirs", a, b);
+}
+
 
 /**
  * Get all selected folders.
@@ -331,21 +344,18 @@ std::vector<std::shared_ptr<CMaildir> > CGlobal::get_folders()
      * By default we'll sort, case-insensitively, the list of folders.
      */
 
-#if 0
-    CLua *lua = CLua::Instance();
     if ( lua->is_function( "sort_maildirs" )  )
     {
         /**
-         * TODO: We'll need more primitives here.
+         * TODO: Consider ways to do this without looking up the Lua function
+         * every time.
          */
+         std::sort(display.begin(), display.end(), sort_maildir_ptr_by_lua);
     }
     else
     {
         std::sort(display.begin(), display.end(), sort_maildir_ptr_by_name);
     }
-#endif
-
-    std::sort(display.begin(), display.end(), sort_maildir_ptr_by_name);
 
     return (display);
 }
