@@ -28,7 +28,7 @@ extern "C"
 #include <vector>
 #include <memory>
 #include "utfstring.h"
-
+#include "lua_tmpl.h"
 
 class CMaildir;
 
@@ -206,8 +206,16 @@ public:
      */
     bool compare(const char *name,
                  std::shared_ptr<CMaildir> a,
-                 std::shared_ptr<CMaildir> b);
-
+                 std::shared_ptr<CMaildir> b)
+    {
+        return call<bool>(m_lua, name, a, b);
+    }
+    
+    std::string mapstring(const char *name,
+                          std::shared_ptr<CMaildir> a)
+    {
+        return call<std::string>(m_lua, name, a);
+    }
 protected:
 
     /**
@@ -228,5 +236,4 @@ private:
      * The handle to the Lua interpreter.
      */
     lua_State *m_lua;
-
 };

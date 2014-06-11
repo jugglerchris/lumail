@@ -861,6 +861,7 @@ bool CLua::filter(const char *name, std::shared_ptr<CMaildir> maildir,
     return lua_toboolean(m_lua, -1);
 }
 
+#if 0
 /**
  * Call a global function, passing it two CMaildirs, and return
  * the result as converted to bool using Lua semantics, ie only
@@ -908,4 +909,11 @@ bool CLua::compare(const char *name,
      * boolean
      */
     return lua_toboolean(m_lua, -1);
+}
+#endif
+
+template <>
+void push_one<std::shared_ptr<CMaildir> >(lua_State *L, std::shared_ptr<CMaildir> maildir)
+{
+    push_maildir(L, maildir);
 }

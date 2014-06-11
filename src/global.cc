@@ -284,6 +284,12 @@ bool sort_maildir_ptr_by_name(std::shared_ptr<CMaildir> a, std::shared_ptr<CMail
     return( strcasecmp(a->path().c_str(), b->path().c_str() ) < 0 );
 }
 
+bool sort_by_key(const std::pair<std::shared_ptr<CMaildir>, std::string> &a,
+                 const std::pair<std::shared_ptr<CMaildir>, std::string> &b)
+{
+    return( a.second < b.second );
+}
+
 /**
  * Sort maildirs using a custom Lua function "sort_maildirs"
  */
@@ -307,6 +313,8 @@ std::vector<std::string> CGlobal::get_selected_folders()
 }
 
 
+#include <sys/time.h>
+#include <sys/resource.h>
 /**
  * Get folders matching the current mode.
  */
@@ -344,18 +352,53 @@ std::vector<std::shared_ptr<CMaildir> > CGlobal::get_folders()
      * By default we'll sort, case-insensitively, the list of folders.
      */
 
-    if ( lua->is_function( "sort_maildirs" )  )
+FILE *f = fopen("sort_times.txt", "a");
+struct timespec start, end;
+bool is_lua = false;
+bool is_key = false;
+    if ( lua->is_function( "sort_maildir_key") )
+    {
+        typedef std::pair<std::shared_ptr<CMaildir>, std::string> mdp;
+        is_key = true;
+        is_lua = true;
+clock_gettime(CLOCK_THREAD_CPUTIME_ID, &start);
+        std::vector<mdp> keyed;
+        for (std::shared_ptr<CMaildir> maildir : display)
+        {
+            keyed.push_back(std::make_pair(maildir, lua->mapstring("sort_maildir_key", maildir)));
+        }
+        std::sort(keyed.begin(), keyed.end(), sort_by_key);
+        
+        /* Copy the sorted results back to display */
+        for (size_t i=0; i<keyed.size(); ++i)
+        {
+            display[i] = keyed[i].first;
+        }
+clock_gettime(CLOCK_THREAD_CPUTIME_ID, &end);
+    }
+    else if ( lua->is_function( "sort_maildirs" )  )
     {
         /**
          * TODO: Consider ways to do this without looking up the Lua function
          * every time.
          */
+is_lua = true;
+clock_gettime(CLOCK_THREAD_CPUTIME_ID, &start);
          std::sort(display.begin(), display.end(), sort_maildir_ptr_by_lua);
+clock_gettime(CLOCK_THREAD_CPUTIME_ID, &end);
     }
     else
     {
+clock_gettime(CLOCK_THREAD_CPUTIME_ID, &start);
         std::sort(display.begin(), display.end(), sort_maildir_ptr_by_name);
+clock_gettime(CLOCK_THREAD_CPUTIME_ID, &end);
     }
+int64_t ns;
+ns = end.tv_sec * 1000000000 + end.tv_nsec;
+ns -= start.tv_sec * 1000000000 + start.tv_nsec;
+fprintf(f, "User time used in %s: %ld.%06ld\n", is_lua? is_key? "Keyed Lua" : "Lua":"C++",
+        ns/1000000000, (ns/1000)%1000000);
+fclose(f);
 
     return (display);
 }
