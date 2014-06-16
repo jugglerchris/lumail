@@ -356,9 +356,9 @@ int select_maildir(lua_State *L)
  *
  * Returns NULL otherwise.
  */
-static std::shared_ptr<CMaildir> check_maildir(lua_State *L, int index)
+std::shared_ptr<CMaildir> check_maildir(lua_State *L, int index)
 {
-    void *ud = luaL_checkudata(L, 1, "maildir_mt");
+    void *ud = luaL_checkudata(L, index, "maildir_mt");
     if (ud)
     {
         /* Return a copy of the pointer */

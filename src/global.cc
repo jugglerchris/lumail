@@ -356,6 +356,7 @@ FILE *f = fopen("sort_times.txt", "a");
 struct timespec start, end;
 bool is_lua = false;
 bool is_key = false;
+bool is_all_lua = false;
     if ( lua->is_function( "sort_maildir_key") )
     {
         typedef std::pair<std::shared_ptr<CMaildir>, std::string> mdp;
@@ -374,6 +375,13 @@ clock_gettime(CLOCK_THREAD_CPUTIME_ID, &start);
         {
             display[i] = keyed[i].first;
         }
+clock_gettime(CLOCK_THREAD_CPUTIME_ID, &end);
+    }
+    else if ( lua->is_function( "sort_lua") )
+    {
+    is_lua = is_all_lua = true;
+clock_gettime(CLOCK_THREAD_CPUTIME_ID, &start);
+        display = lua->call_vector("sort_lua", display);
 clock_gettime(CLOCK_THREAD_CPUTIME_ID, &end);
     }
     else if ( lua->is_function( "sort_maildirs" )  )
@@ -396,7 +404,7 @@ clock_gettime(CLOCK_THREAD_CPUTIME_ID, &end);
 int64_t ns;
 ns = end.tv_sec * 1000000000 + end.tv_nsec;
 ns -= start.tv_sec * 1000000000 + start.tv_nsec;
-fprintf(f, "User time used in %s: %ld.%06ld\n", is_lua? is_key? "Keyed Lua" : "Lua":"C++",
+fprintf(f, "User time used in %s: %ld.%06ld\n", is_lua? is_all_lua? "Fully Lua" : is_key? "Keyed Lua" : "Lua":"C++",
         ns/1000000000, (ns/1000)%1000000);
 fclose(f);
 

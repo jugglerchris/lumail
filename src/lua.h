@@ -216,6 +216,12 @@ public:
     {
         return call<std::string>(m_lua, name, a);
     }
+    
+    std::vector<std::shared_ptr<CMaildir> > call_vector(const char *name,
+                    std::vector<std::shared_ptr<CMaildir> > md)
+    {
+        return call<std::vector<std::shared_ptr<CMaildir> > >(m_lua, name, md);
+    }
 protected:
 
     /**
