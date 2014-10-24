@@ -19,7 +19,7 @@
 #pragma once
 
 #include "lua.h"
-
+#include "maildir.h"
 
 /**
  * Forward declaration of class.
@@ -96,6 +96,9 @@ int header(lua_State * L);
 int is_new(lua_State * L);
 int mark_read(lua_State * L);
 int mark_unread(lua_State * L);
+int is_flagged(lua_State * L);
+int mark_flagged(lua_State * L);
+int mark_unflagged(lua_State * L);
 int reply(lua_State * L);
 int save_message( lua_State *L );
 int scroll_message_down(lua_State *L);

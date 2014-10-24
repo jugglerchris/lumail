@@ -77,7 +77,6 @@ CMessage::~CMessage()
      */
     if ( m_attachments.size() > 0 )
     {
-        std::vector<CAttachment*>::iterator it;
         for (CAttachment *cur : m_attachments)
         {
             DEBUG_LOG( "Deleting attachment object: " + cur->name() );
@@ -454,6 +453,21 @@ bool CMessage::is_new()
 
 
 /**
+ * Is this message flagged?
+ */
+bool CMessage::is_flagged()
+{
+    /**
+     * A message is flagged if it has the flag "F".
+     */
+    if ( has_flag( 'F' ) )
+        return true;
+
+    return false;
+}
+
+
+/**
  * Get the message last modified time (cached).
  */
 time_t CMessage::mtime()
@@ -541,6 +555,36 @@ bool CMessage::mark_unread()
 
 
 /**
+ * Mark the message as flagged.
+ */
+bool CMessage::mark_flagged()
+{
+    if ( !has_flag( 'F' ) )
+    {
+        add_flag( 'F' );
+        return true;
+    }
+
+    return false;
+}
+
+
+/**
+ * Mark the message as unflagged.
+ */
+bool CMessage::mark_unflagged()
+{
+    if ( has_flag( 'F' ) )
+    {
+        remove_flag( 'F' );
+        return true;
+    }
+
+    return false;
+}
+
+
+/**
  * Format the message for display in the header - via the lua format string.
  */
 UTFString CMessage::format( std::string fmt )
@@ -561,7 +605,7 @@ UTFString CMessage::format( std::string fmt )
     /**
      * The variables we know about.
      */
-    const char *fields[10] = { "FLAGS", "FROM", "TO", "SUBJECT",  "DATE", "YEAR", "MONTH", "MON", "DAY", 0 };
+    const char *fields[10] = { "$FLAGS", "$FROM", "$TO", "$SUBJECT",  "$DATE", "$YEAR", "$MONTH", "$MON", "$DAY", 0 };
     const char **std_name = fields;
 
 
@@ -579,26 +623,26 @@ UTFString CMessage::format( std::string fmt )
             /**
              * The bit before the variable, the bit after, and the body we'll replace it with.
              */
-            std::string before = result.substr(0,offset-1);
+            std::string before = result.substr(0, offset);
             std::string body = "";
             std::string after  = result.substr(offset+strlen(std_name[i]));
 
             /**
              * Expand the specific variables.
              */
-            if ( strcmp(std_name[i] , "TO" ) == 0 )
+            if ( strcmp(std_name[i] , "$TO" ) == 0 )
             {
                 body = header( "To" );
             }
-            if ( strcmp(std_name[i] , "DATE" ) == 0 )
+            if ( strcmp(std_name[i] , "$DATE" ) == 0 )
             {
                 body = date();
             }
-            if ( strcmp(std_name[i] , "FROM" ) == 0 )
+            if ( strcmp(std_name[i] , "$FROM" ) == 0 )
             {
                 body += header( "From" );
             }
-            if ( strcmp(std_name[i] , "FLAGS" ) == 0 )
+            if ( strcmp(std_name[i] , "$FLAGS" ) == 0 )
             {
                 /**
                  * Ensure the flags are suitably padded.
@@ -608,23 +652,23 @@ UTFString CMessage::format( std::string fmt )
                 while( body.size() < 4 )
                     body += " ";
             }
-            if ( strcmp(std_name[i] , "SUBJECT" ) == 0 )
+            if ( strcmp(std_name[i] , "$SUBJECT" ) == 0 )
             {
                 body = header( "Subject" );
             }
-            if ( strcmp(std_name[i],  "YEAR" ) == 0 )
+            if ( strcmp(std_name[i],  "$YEAR" ) == 0 )
             {
                 body = date(EYEAR);
             }
-            if ( strcmp(std_name[i],  "MONTH" ) == 0 )
+            if ( strcmp(std_name[i],  "$MONTH" ) == 0 )
             {
                 body = date(EMONTH);
             }
-            if ( strcmp(std_name[i],  "MON" ) == 0 )
+            if ( strcmp(std_name[i],  "$MON" ) == 0 )
             {
                 body = date(EMON);
             }
-            if ( strcmp(std_name[i],  "DAY" ) == 0 )
+            if ( strcmp(std_name[i],  "$DAY" ) == 0 )
             {
                 body = date(EDAY);
             }
@@ -674,7 +718,14 @@ UTFString CMessage::header( std::string name )
     std::string nm(name);
     std::transform(nm.begin(), nm.end(), nm.begin(), tolower);
 
-    return( m_header_values[nm] );
+    /**
+     * Headers shouldn't have newlines in them.
+     */
+    std::string val = m_header_values[nm];
+    val.erase(std::remove(val.begin(), val.end(), '\n'), val.end());
+    val.erase(std::remove(val.begin(), val.end(), '\r'), val.end());
+
+    return( val );
 
 }
 
@@ -1290,7 +1341,8 @@ bool CMessage::parse_attachments()
          * if we're dealing with an attachment, or an inline-part.
          */
         GMimeContentDisposition *disp = NULL;
-        disp = g_mime_object_get_content_disposition (part);
+        if ( GMIME_IS_OBJECT(part) )
+            disp = g_mime_object_get_content_disposition (part);
 
         if ( ( disp != NULL ) &&
              ( !g_ascii_strcasecmp (disp->disposition, "attachment") ) )
@@ -1315,7 +1367,7 @@ bool CMessage::parse_attachments()
 
             g_mime_object_write_to_stream (GMIME_OBJECT (msg), mem);
         }
-        else
+        else if ( GMIME_IS_PART(part))
         {
             GMimeDataWrapper *content = g_mime_part_get_content_object (GMIME_PART (part));
 
@@ -1386,8 +1438,6 @@ std::vector<std::string> CMessage::attachments()
     if ( m_attachments.empty() )
         parse_attachments();
 
-
-    std::vector<CAttachment>::iterator it;
     for (CAttachment *cur : m_attachments)
     {
         paths.push_back( cur->name() );
@@ -1842,7 +1892,7 @@ bool CMessage::get_body_part( int offset, char **data, size_t *length )
     {
         GMimeObject *part  = g_mime_part_iter_get_current (iter);
 
-        if ( ( GMIME_IS_OBJECT( part ) ) && ( GMIME_IS_PART(part) ) )
+        if ( ( GMIME_IS_OBJECT( part ) )  && ( GMIME_IS_PART(part) ) )
         {
             if ( count == offset )
             {
@@ -1984,7 +2034,14 @@ bool CMessage::get_body_part( int offset, char **data, size_t *length )
  */
 UTFString CMessage::mime_part_to_text( GMimeObject *obj )
 {
-    assert( obj );
+    /**
+     * This shouldn't happen.
+     */
+    if ( obj == NULL )
+    {
+        DEBUG_LOG( "NULL message passed to mime_part_to_text()" );
+        return "";
+    }
 
     GMimeContentType *content_type = g_mime_object_get_content_type (obj);
 

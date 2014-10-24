@@ -730,7 +730,7 @@ int compose(lua_State * L)
 int count_messages(lua_State * L)
 {
     CGlobal *global = CGlobal::Instance();
-    std::vector<std::shared_ptr<CMessage> > *messages = global->get_messages();
+    CMessageList *messages = global->get_messages();
     assert(messages!=NULL);
 
     lua_pushinteger(L, messages->size() );
@@ -879,6 +879,12 @@ int forward(lua_State * L)
     std::string date    = mssg->header("Date");
 
 
+    /**
+     * .signature handling.
+     */
+    UTFString sig = lua->get_signature( sender, to, sub );
+
+
     CGlobal *global   = CGlobal::Instance();
     std::string *from = global->get_variable( "from" );
 
@@ -889,7 +895,7 @@ int forward(lua_State * L)
     std::vector<std::string> headers;
     headers.push_back( "To: " + recipient);
     headers.push_back( "From: " + *from);
-    headers.push_back( "Subject: Fwd:" + sub);
+    headers.push_back( "Subject: Fwd: " + sub);
     headers.push_back( "Message-ID: " + get_message_id(L) );
 
 
@@ -923,6 +929,12 @@ int forward(lua_State * L)
     for( int i = 0; i < lines; i++ )
     {
         bbody += body[i] + "\n";
+    }
+
+    if ( ! sig.empty() )
+    {
+        bbody += "\n";
+        bbody += sig ;
     }
 
     /**
@@ -1086,6 +1098,93 @@ int is_new(lua_State * L)
     }
 
     return( ret );
+}
+
+
+/**
+ * Is the named/current message flagged?
+ */
+int is_flagged(lua_State * L)
+{
+    /**
+     * Get the path (optional).
+     */
+    const char *str = NULL;
+    if (lua_isstring(L, -1))
+        str = lua_tostring(L, 1);
+
+    int ret = 0;
+
+    std::shared_ptr<CMessage> msg = get_message_for_operation( str );
+    if ( msg == NULL )
+    {
+        CLua *lua = CLua::Instance();
+        lua->execute( "msg(\"" MISSING_MESSAGE "\");" );
+        return( 0 );
+    }
+    else
+    {
+        if ( msg->is_flagged() )
+            lua_pushboolean(L,1);
+        else
+            lua_pushboolean(L,0);
+
+        ret = 1;
+    }
+
+    return( ret );
+}
+
+
+/**
+ * Mark the message as flagged.
+ */
+int mark_flagged(lua_State * L)
+{
+    /**
+     * Get the path (optional).
+     */
+    const char *str = NULL;
+    if (lua_isstring(L, -1))
+        str = lua_tostring(L, 1);
+
+    std::shared_ptr<CMessage> msg = get_message_for_operation( str );
+    if ( msg == NULL )
+    {
+        CLua *lua = CLua::Instance();
+        lua->execute( "msg(\"" MISSING_MESSAGE "\");" );
+        return( 0 );
+    }
+
+    msg->mark_flagged();
+
+    return( 0 );
+}
+
+
+/**
+ * Mark the message as unflagged.
+ */
+int mark_unflagged(lua_State * L)
+{
+    /**
+     * Get the path (optional).
+     */
+    const char *str = NULL;
+    if (lua_isstring(L, -1))
+        str = lua_tostring(L, 1);
+
+    std::shared_ptr<CMessage> msg = get_message_for_operation( str );
+    if ( msg == NULL )
+    {
+        CLua *lua = CLua::Instance();
+        lua->execute( "msg(\"" MISSING_MESSAGE "\");" );
+        return( 0 );
+    }
+
+    msg->mark_unflagged();
+
+    return( 0 );
 }
 
 
@@ -1462,7 +1561,7 @@ int scroll_message_to( lua_State *L)
         return luaL_error(L, "Missing argument to scroll_message_to(..)");
 
     CGlobal *global = CGlobal::Instance();
-    std::vector<std::shared_ptr<CMessage> > *messages = global->get_messages();
+    CMessageList *messages = global->get_messages();
 
     int count = messages->size();
     int selected = global->get_selected_message();
