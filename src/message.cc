@@ -1440,7 +1440,7 @@ bool CMessage::parse_attachments()
             if ( ( view_inline == true ) ||
                  ( view_inline == false && ( is_inline == false ) ) )
             {
-                CAttachment *foo = new CAttachment( tmp, (void *)adata,(size_t ) len );
+                CAttachment *foo = new CAttachment( aname, (void *)adata,(size_t ) len );
                 m_attachments.push_back(foo);
             }
         }
