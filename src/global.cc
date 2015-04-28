@@ -515,9 +515,23 @@ void CGlobal::update_messages()
             if ( content->matches_filter( filter ) )
                 m_messages->push_back(content) ;
         }
+    }
 
+    /**
+     * Sort?
+     */
+    CLua *lua = CLua::Instance();
+    if ( lua->is_function( "sort_messages" )  )
+    {
         /**
-         * Sort?
+         * Let the Lua function do all the sorting work.
+         */
+        *m_messages = lua->call_messages("sort_messages", *m_messages);
+    }
+    else
+    {
+        /*
+         * ...or use the native sort based on the "sort" variable.
          */
         std::sort(m_messages->begin(), m_messages->end(), sort_messages);
     }
