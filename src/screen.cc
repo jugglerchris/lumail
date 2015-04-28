@@ -463,7 +463,16 @@ void CScreen::drawIndex()
         }
 
         if (cur != NULL)
-            buf =  cur->format();
+        {
+            CLua *lua = CLua::Instance();
+            if (lua->is_function("format_message")) {
+                buf = lua->call_message_str("format_message", cur);
+            }
+            else
+            {
+                buf =  cur->format();
+            }
+        }
 
         /**
          * Pad.
