@@ -76,6 +76,7 @@ struct CLuaMapping primitive_list[] =
     {"screen_width", "Return the width of the screen in columns.", (lua_CFunction) screen_width },
     {"sleep", "Pause execution for the given number of seconds.", (lua_CFunction) sleep },
     {"stuff", "Stuff keys into the input-buffer", (lua_CFunction) stuff },
+    {"utf8_width", "Return the on-screen width of a UTF8 string", (lua_CFunction) utf8_width },
 
 /**
  * File/Path utilities.  Defined in src/bindings_file.cc

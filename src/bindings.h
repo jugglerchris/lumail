@@ -191,3 +191,4 @@ int screen_width(lua_State * L);
 int show_help(lua_State * L);
 int sleep(lua_State *L );
 int stuff(lua_State * L);
+int utf8_width(lua_State *L);

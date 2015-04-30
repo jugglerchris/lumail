@@ -803,3 +803,34 @@ int stuff(lua_State * L)
 
     return 0;
 }
+
+/**
+ * Return the width in character cells of a UTF-8 string.
+ */
+int utf8_width(lua_State *L)
+{
+    const char *s;
+    size_t len;
+    lua_Integer result = -1;
+    
+    if (!lua_isstring(L, -1))
+    {
+        return luaL_error(L, "Invalid string argument to utf8_width()");
+    }
+    s = lua_tolstring(L, 1, &len);
+
+    /* Convert to wchar_t so that we can use wcswidth(). */
+    iconv_t cv;
+    
+    cv = g_mime_iconv_open ("WCHAR_T", "UTF-8");
+    wchar_t *converted = (wchar_t *)g_mime_iconv_strndup(cv, (const char *) s, len );
+    if (converted != NULL)
+    {
+        result = wcswidth(converted, wcslen(converted));
+        g_free(converted);
+    }
+    g_mime_iconv_close(cv);
+    lua_pushinteger(L, result);
+
+    return 1;
+}
