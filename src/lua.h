@@ -32,6 +32,7 @@ extern "C"
 
 class CMaildir;
 class CMessage;
+class CAttachment;
 
 
 /**
@@ -226,10 +227,19 @@ public:
      * Call a global function, passing a CMessage, and return the
      * a string (as converted by Lua's tostring).
      *
+     * On an error, returns the onerror value, which defaults to the empty
+     * string.
+     */
+    std::string call_message_str(const char *name, std::shared_ptr<CMessage> message, std::string onerror="");
+
+    /**
+     * Call a global function, passing a CAttachment, and return the
+     * a string (as converted by Lua's tostring).
+     *
      * On an error, returns the onerror value, which defaults to true
      * so that folders aren't accidentally hidden by a Lua error.
      */
-    std::string call_message_str(const char *name, std::shared_ptr<CMessage> message, std::string onerror="");
+    std::string call_attach_str(const char *name, std::shared_ptr<CAttachment> attachment, std::string onerror="");
 
 /**
  ** Static helper methods.

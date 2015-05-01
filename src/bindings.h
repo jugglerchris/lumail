@@ -124,7 +124,7 @@ int get_body_part(lua_State *L);
 int get_body_parts(lua_State *L);
 int has_body_part(lua_State *L);
 int save_attachment(lua_State *L);
-
+bool push_attachment(lua_State *L, std::shared_ptr<CAttachment> attachment);
 
 /**
  * bindings_prompts.cc:

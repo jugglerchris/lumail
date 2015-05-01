@@ -1080,6 +1080,49 @@ std::string CLua::call_message_str(const char *name,
     return result;
 }
 
+std::string CLua::call_attach_str(const char *name,
+                                  std::shared_ptr<CAttachment> attachment,
+                                  std::string onerror)
+{
+    std::string result;
+    lua_getglobal(m_lua, name);
+
+    if (!lua_isfunction(m_lua, -1))
+    {
+        return onerror;
+    }
+
+    if (!push_attachment(m_lua, attachment))
+    {
+        return onerror;
+    }
+
+    int error = lua_pcall(m_lua, 1, 1, 0);
+    if (error)
+    {
+        lua_getglobal(m_lua, "on_error");
+        /* We could check for an error, but what can we do?  Instead we'll
+         * just get an error from lua_pcall. */
+
+        /* Push the error string from the previous pcall onto the top of
+         * the stack. */
+        lua_pushvalue(m_lua, -2);
+
+        /* And call the error handler. */
+        lua_pcall(m_lua, 1, 0, 0);
+
+        return onerror;
+    }
+
+    const char *s = lua_tostring(m_lua,-1);
+    if (s) {
+        result = s;
+    } else {
+        return onerror;
+    }
+    return result;
+}
+
 void CLua::reg_funcs(lua_State *L, const luaL_Reg *funcs)
 {
 #if LUA_VERSION_NUM == 501

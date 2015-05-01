@@ -24,12 +24,18 @@
 #include <glib/gstdio.h>
 #include <gmime/gmime.h>
 #include <unordered_map>
+#include <memory>
 
 #include "utfstring.h"
 #include "attachment.h"
 
 
 class CMaildir;
+
+/**
+ * Type of a list of attachments.
+ */
+typedef std::vector<std::shared_ptr<CAttachment> > CAttachList;
 
 /**
  * A class for working with a single message.
@@ -190,7 +196,7 @@ public:
     /**
      * Get the body of the attachment.
      */
-    CAttachment* get_attachment( int offset );
+    std::shared_ptr<CAttachment> get_attachment( int offset );
 
     /**
      * This is solely used for sorting by message-headers
@@ -301,6 +307,6 @@ private:
     /**
      * Cached attachments belonging to this message.
      */
-    std::vector<CAttachment *> m_attachments;
+    CAttachList m_attachments;
 
 };

@@ -51,8 +51,8 @@ int attachment(lua_State *L)
         return( 0 );
     }
 
-    CAttachment *c = msg->get_attachment(offset);
-    if ( c == NULL )
+    std::shared_ptr<CAttachment> c = msg->get_attachment(offset);
+    if ( !c )
     {
         return(0);
     }
@@ -394,4 +394,77 @@ int save_attachment(lua_State *L)
     }
     return( 1 );
 
+}
+
+/**
+ * Delete the Attachment pointer
+ */
+static int attachment_mt_gc(lua_State *L)
+{
+    void *ud = luaL_checkudata(L, 1, "attachment_mt");
+    if (ud)
+    {
+        std::shared_ptr<CAttachment> *ud_attachment = static_cast<std::shared_ptr<CAttachment> *>(ud);
+        
+        /* Call the destructor */
+        ud_attachment->~shared_ptr<CAttachment>();
+    }
+    return 0;
+}
+/**
+ * The attachment metatable entries.
+ */
+static const luaL_Reg attachment_mt_fields[] = {
+    { "__gc",    attachment_mt_gc },
+    { NULL, NULL },  /* Terminator */
+};
+
+
+/**
+ * Push the attachment metatable onto the Lua stack, creating it if needed.
+ */
+static void push_attachment_mt(lua_State *L)
+{
+    int created = luaL_newmetatable(L, "attachment_mt");
+    if (created)
+    {
+        /* A new table was created, set it up now. */
+        luaL_register(L, NULL, attachment_mt_fields);
+        
+        /* Set itself as its __index */
+        lua_pushvalue(L, -1);
+        lua_setfield(L, -2, "__index");
+    }
+}
+
+/**
+ * Push a message onto the Lua stack as a userdata.
+ *
+ * Returns true on success.
+ */
+bool push_attachment(lua_State *L, std::shared_ptr<CAttachment> attachment)
+{
+    void *ud = lua_newuserdata(L, sizeof(std::shared_ptr<CAttachment>));
+    if (!ud)
+        return false;
+    
+    /* Construct a blank shared_ptr.  To be safe, make sure it's a valid
+     * object before setting the metatable. */
+    std::shared_ptr<CAttachment> *ud_attachment = new (ud) std::shared_ptr<CAttachment>();
+    if (!ud_attachment)
+    {
+        /* Discard the userdata */
+        lua_pop(L, 1);
+        return false;
+    }
+    
+    /* FIXME: check errors */
+    push_attachment_mt(L);
+    
+    lua_setmetatable(L, -2);
+    
+    /* And now store the maildir pointer into the userdata */
+    *ud_attachment = attachment;
+    
+    return true;
 }

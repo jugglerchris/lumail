@@ -687,7 +687,7 @@ void CScreen::drawMessage()
      */
     std::vector<std::string> attachments = cur->attachments();
     bool show_attachments = lua->get_bool( "show_attachments", true );
-
+    bool format_attach_lua = lua->is_function( "format_attachment" );
 
     if ( attachments.size() > 0 && show_attachments  )
     {
@@ -714,7 +714,15 @@ void CScreen::drawMessage()
              * and revert.
              */
             attrset( COLOR_PAIR(m_colours[attachment_colour]) );
-            printw( "Attachment %d - %s", acount, path.c_str() );
+            if (format_attach_lua)
+            {
+                printw( "%s", lua->call_attach_str("format_attachment",
+                              cur->get_attachment(acount)).c_str());
+            }
+            else
+            {
+                printw( "Attachment %d - %s", acount, path.c_str() );
+            }
             attrset( COLOR_PAIR(m_colours["white"]));
 
             acount += 1;

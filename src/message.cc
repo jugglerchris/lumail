@@ -73,18 +73,6 @@ CMessage::~CMessage()
     DEBUG_LOG( dm );
 #endif
 
-    /**
-     * If we've parsed any attachments then free them
-     */
-    if ( m_attachments.size() > 0 )
-    {
-        for (CAttachment *cur : m_attachments)
-        {
-            DEBUG_LOG( "Deleting attachment object: " + cur->name() );
-            delete( cur );
-        }
-    }
-
 }
 
 /**
@@ -1449,7 +1437,7 @@ bool CMessage::parse_attachments()
             if ( ( view_inline == true ) ||
                  ( view_inline == false && ( is_inline == false ) ) )
             {
-                CAttachment *foo = new CAttachment( aname, (void *)adata,(size_t ) len );
+                std::shared_ptr<CAttachment> foo = std::shared_ptr<CAttachment>(new CAttachment( aname, (void *)adata,(size_t ) len ));
                 m_attachments.push_back(foo);
             }
         }
@@ -1475,7 +1463,7 @@ std::vector<std::string> CMessage::attachments()
     if ( m_attachments.empty() )
         parse_attachments();
 
-    for (CAttachment *cur : m_attachments)
+    for (std::shared_ptr<CAttachment> cur : m_attachments)
     {
         paths.push_back( cur->name() );
     }
@@ -1509,7 +1497,7 @@ bool CMessage::save_attachment( int offset, std::string output_path )
     /**
      * Get the attachment object.
      */
-    CAttachment *cur = m_attachments.at( offset );
+    std::shared_ptr<CAttachment> cur = m_attachments.at( offset );
 
     /**
      * Write out the data.
@@ -1527,7 +1515,7 @@ bool CMessage::save_attachment( int offset, std::string output_path )
 /**
  * Return the content of the given attachment.
  */
-CAttachment* CMessage::get_attachment( int offset )
+std::shared_ptr<CAttachment> CMessage::get_attachment( int offset )
 {
     /**
      * Parse attachments if empty.
@@ -1549,7 +1537,7 @@ CAttachment* CMessage::get_attachment( int offset )
     /**
      * Get the attachment object, and return it.
      */
-    CAttachment *cur = m_attachments.at( offset );
+    std::shared_ptr<CAttachment> cur = m_attachments.at( offset );
     return( cur );
 }
 
