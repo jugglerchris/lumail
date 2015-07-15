@@ -1423,9 +1423,12 @@ bool CMessage::parse_attachments()
             char tmp[128] = { '\0' };
             bool is_inline = false;
 
+            GMimeContentType *content_type = g_mime_object_get_content_type (part);
+            gchar *type = g_mime_content_type_to_string ( content_type );
+
             if ( aname == NULL || ( strlen( aname ) < 1 ) )
             {
-                snprintf(tmp, sizeof(tmp)-1, "inline-part-%d", count );
+                snprintf(tmp, sizeof(tmp)-1, "inline-part-%d %s", count, type );
                 count += 1;
                 aname = tmp;
                 is_inline = true;
