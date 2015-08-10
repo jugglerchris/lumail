@@ -31,16 +31,6 @@ class CScreen
 public:
 
     /**
-     * Constructor.  NOP.
-     */
-    CScreen();
-
-    /**
-     * Destructor.  NOP.
-     */
-    ~CScreen();
-
-    /**
      * Draw/Refresh the display.
      */
     void refresh_display();
@@ -71,6 +61,13 @@ public:
     static void clear_status();
 
     /**
+     * Display a line of text on the screen, interpreting ${colour:red bold}
+     * type codes.
+     */
+    void display_styled_line(int screenLine, std::string line,
+                                             const std::string &default_colour);
+
+    /**
      * Some simple remapping of keyboard input.
      */
     static const char *get_key_name( gunichar c, bool isKeyCode);
@@ -92,7 +89,24 @@ public:
      */
     static UTFString get_line();
 
+    /**
+     * Get access to this singleton instance.
+     */
+    static CScreen *Instance();
+
 private:
+
+    static CScreen *pinstance;
+
+    /**
+     * Constructor.  NOP.
+     */
+    CScreen();
+
+    /**
+     * Destructor.  NOP.
+     */
+    ~CScreen();
 
     /**
      * The segment of the screen the highlighted row is within.

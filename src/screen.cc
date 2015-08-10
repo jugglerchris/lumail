@@ -47,10 +47,27 @@
 
 
 /**
+ * Instance-handle.
+ */
+CScreen *CScreen::pinstance = NULL;
+
+/**
+ * Get access to this singleton object.
+ */
+CScreen *CScreen::Instance()
+{
+    if (!pinstance)
+        pinstance = new CScreen;
+
+    return pinstance;
+}
+
+/**
  * Constructor.  NOP.
  */
 CScreen::CScreen()
 {
+    setup();
 }
 
 /**
@@ -499,7 +516,6 @@ void CScreen::drawIndex()
 }
 
 
-
 /**
  * Draw the message mode.
  */
@@ -843,7 +859,88 @@ void CScreen::drawMessage()
     cur->on_read_message();
 }
 
+void CScreen::display_styled_line(int screenLine, std::string line,
+                                  const std::string &default_colour)
+{
+    /**
+     * Move to the start of the line, and setup the default colour.
+     */
+    move(screenLine, 0);
+    attron( COLOR_PAIR(m_colours[default_colour]) );
 
+    while (line.length() > 0)
+    {
+        size_t offset = line.find_first_of('$');
+        if (offset == std::string::npos) {
+            offset = line.length();
+        }
+        if (offset > 0) {
+            printw("%s", line.substr(0, offset).c_str());
+            line = line.substr(offset);
+        }
+        
+        /**
+         * If the line is of the form ${XX YY ZZ} then strip
+         * that prefix out of the way, and process it as colour/formatting.
+         */
+        if ( line.length() > 3 )
+        {
+            if ( ( line[0] == '$' ) && ( line[1] == '{' ) )
+            {
+                size_t offset = line.find_first_of( '}' );
+                if ( offset != std::string::npos )
+                {
+                    /**
+                     * Get the code which is the start of the line
+                     * minus the leading "${" and trailing "}".
+                     */
+                    UTFString code = line.substr(0, offset );
+                    code = code.substr(2);
+
+                    /**
+                     * Now the line is just the text to display.
+                     */
+                    line = line.substr( offset+1 );
+
+                    /**
+                     * OK so we now need to process the code.  Given
+                     * the input "${colour:pink bold} .." we'll have
+                     * a code that reads "colour:pink bold"
+                     *
+                     * We need to split that up on whitespace and
+                     * parse each part, ignoring anything we don't
+                     * understand.
+                     *
+                     */
+                    std::vector<UTFString> elems = CUtil::split(code, ' ');
+
+                    /**
+                     * Now we've tokenized look for colours/bold/etc.
+                     */
+                    for (UTFString token : elems)
+                    {
+                        if ( strcasestr( token.c_str(), "colour:" ) != NULL )
+                        {
+                            UTFString col = token.substr( 7 );
+                            attron( COLOR_PAIR(m_colours[col]) );
+                        }
+                        else
+                        {
+                            std::string *x = new std::string( token );
+
+                            int val = lookup_curses_attribute( x, 0 );
+                            if ( val != 0 )
+                                attron( val );
+
+                            delete( x );
+                        }
+                    }
+                }
+            }
+        }
+    }
+    attrset( 0 );
+}
 
 /**
  * Draw text which has been set from lua.
@@ -881,76 +978,7 @@ void CScreen::drawText()
             if ( i+offset < (int)text.size() )
                 line = text.at(i+offset);
 
-            /**
-             * Move to the start of the line, and setup the default colour.
-             */
-            move(i, 0);
-            attron( COLOR_PAIR(m_colours[text_colour]) );
-
-            /**
-             * If the line is of the form ${XX YY ZZ} then strip
-             * that prefix out of the way, and process it as colour/formatting.
-             */
-            if ( line.length() > 3 )
-            {
-                if ( ( line[0] == '$' ) && ( line[1] == '{' ) )
-                {
-                    size_t offset = line.find_first_of( '}' );
-                    if ( offset != std::string::npos )
-                    {
-                        /**
-                         * Get the code which is the start of the line
-                         * minus the leading "${" and trailing "}".
-                         */
-                        UTFString code = line.substr(0, offset );
-                        code = code.substr(2);
-
-                        /**
-                         * Now the line is just the text to display.
-                         */
-                        line = line.substr( offset+1 );
-
-                        /**
-                         * OK so we now need to process the code.  Given
-                         * the input "${colour:pink bold} .." we'll have
-                         * a code that reads "colour:pink bold"
-                         *
-                         * We need to split that up on whitespace and
-                         * parse each part, ignoring anything we don't
-                         * understand.
-                         *
-                         */
-                        std::vector<UTFString> elems = CUtil::split(code, ' ');
-
-                        /**
-                         * Now we've tokenized look for colours/bold/etc.
-                         */
-                        for (UTFString token : elems)
-                        {
-                            if ( strcasestr( token.c_str(), "colour:" ) != NULL )
-                            {
-                                UTFString col = token.substr( 7 );
-                                attron( COLOR_PAIR(m_colours[col]) );
-                            }
-                            else
-                            {
-                                std::string *x = new std::string( token );
-
-                                int val = lookup_curses_attribute( x, 0 );
-                                if ( val != 0 )
-                                    attron( val );
-
-                                delete( x );
-                            }
-                        }
-                    }
-                }
-            }
-            /**
-             * Draw the line of text, and reset attributes.
-             */
-            printw("%s", line.c_str());
-            attrset( 0 );
+            display_styled_line(i, line, text_colour);
         }
     }
     else

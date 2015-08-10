@@ -682,8 +682,9 @@ int msg(lua_State * L)
     }
 
     CScreen::clear_status();
-    move(CScreen::height() - 1, 0);
-    printw("%s", buf);
+    std::string sbuf = buf;
+    std::string colour = "white";
+    CScreen::Instance()->display_styled_line(CScreen::height() - 1, sbuf, colour);
     return 0;
 }
 

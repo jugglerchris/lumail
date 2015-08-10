@@ -54,8 +54,7 @@ CLumail::CLumail()
     else
         g_mime_init (0);
 
-    m_screen = new CScreen();
-    m_screen->setup();
+    m_screen = CScreen::Instance();
 
     /**
      * Get a lua instance.
